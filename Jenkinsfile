@@ -2,20 +2,15 @@ pipeline {
     agent any
 
     environment {
-        // Docker Hub username
-        DOCKER_USER = 'abhishekpol'
-        // Docker Hub token stored in Jenkins credentials (type: Username with password)
-        DOCKER_PASS = credentials('dockerhub-credentials')
-        IMAGE_NAME = "$DOCKER_USER/devops-resume:latest"
-        CONTAINER_NAME = "resume-app"
-        HOST_PORT = "8085"
-        CONTAINER_PORT = "80"
+        // This will be set from Jenkins credentials
+        DOCKER_USER = ''  // Will be populated via withCredentials
+        DOCKER_PASS = ''  // Will be populated via withCredentials
     }
 
     stages {
 
         stage('Checkout Code') {
-            steps {
+            steps { 
                 echo "🔄 Checking out code from GitHub..."
                 git branch: 'main', url: 'https://github.com/Abhishekpol89/resume-project-devops1.git'
             }
@@ -24,32 +19,33 @@ pipeline {
         stage('Docker Login') {
             steps {
                 echo "🔑 Logging into Docker Hub..."
-                sh 'echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin'
+                // Make sure 'dockerhub-credentials' has your Docker Hub username and PAT as password
+                withCredentials([usernamePassword(credentialsId: 'dockerhub-credentials', 
+                                                  usernameVariable: 'DOCKER_USER', 
+                                                  passwordVariable: 'DOCKER_PASS')]) {
+                    sh 'echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin'
+                }
             }
         }
 
-        stage('Build Docker Image') {
+        stage('Build & Push Docker Image') {
             steps {
-                echo "📦 Building Docker image..."
-                sh "docker build -t $IMAGE_NAME ."
-            }
-        }
-
-        stage('Push Docker Image') {
-            steps {
-                echo "🚀 Pushing Docker image to Docker Hub..."
-                sh "docker push $IMAGE_NAME"
+                echo "📦 Building and pushing Docker image..."
+                sh '''
+                    docker build -t $DOCKER_USER/devops-resume:latest .
+                    docker push $DOCKER_USER/devops-resume:latest
+                '''
             }
         }
 
         stage('Deploy Container') {
             steps {
-                echo "⚡ Deploying Docker container on EC2..."
-                sh """
-                    docker stop $CONTAINER_NAME || true
-                    docker rm $CONTAINER_NAME || true
-                    docker run -d -p $HOST_PORT:$CONTAINER_PORT --name $CONTAINER_NAME $IMAGE_NAME
-                """
+                echo "⚡ Deploying Docker container..."
+                sh '''
+                    docker stop resume-app || true
+                    docker rm resume-app || true
+                    docker run -d -p 8085:80 --name resume-app $DOCKER_USER/devops-resume:latest
+                '''
             }
         }
     }
@@ -60,10 +56,10 @@ pipeline {
             sh 'docker logout || true'
         }
         success {
-            echo "✅ Pipeline completed successfully!"
+            echo '✅ Pipeline completed successfully!'
         }
         failure {
-            echo "❌ Pipeline failed! Check logs for errors."
+            echo '❌ Pipeline failed! Check logs for errors.'
         }
     }
 }
