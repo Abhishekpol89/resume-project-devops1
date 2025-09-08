@@ -29,14 +29,14 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 echo "📦 Building Docker image..."
-                sh 'docker build -t $DOCKER_USER/$DOCKERHUB_REPO:latest .'
+                sh 'docker build -t abhishekpol/devops-resume:latest .'
             }
         }
 
         stage('Push to DockerHub') {
             steps {
                 echo "🚀 Pushing Docker image to Docker Hub..."
-                sh 'docker push $DOCKER_USER/$DOCKERHUB_REPO:latest'
+                sh 'docker push abhishekpol/devops-resume:latest'
             }
         }
 
