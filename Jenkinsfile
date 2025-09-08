@@ -25,8 +25,8 @@ pipeline {
             steps {
                 echo "📦 Building and pushing Docker image..."
                 sh '''
-                    docker build -t $DOCKER_USER/devops-resume:latest .
-                    docker push $DOCKER_USER/devops-resume:latest
+                    docker build -t $DOCKER_USER/devops-resume .
+                    docker push $DOCKER_USER/devops-resume
                 '''
             }
         }
