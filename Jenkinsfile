@@ -2,7 +2,8 @@ pipeline {
     agent any
 
     environment {
-        DOCKERHUB_USER = 'abhishekpol'  // your DockerHub username
+        // DOCKERHUB_USER is now taken from credentials
+        DOCKERHUB_REPO = 'devops-resume'  // Docker image name
     }
 
     stages {
@@ -10,7 +11,7 @@ pipeline {
         stage('Checkout Code') {
             steps { 
                 echo "🔄 Checking out code from GitHub..."
-                git 'https://github.com/Abhishekpol89/resume-project-devops1.git'
+                git branch: 'main', url: 'https://github.com/Abhishekpol89/resume-project-devops1.git'
             }
         }
 
@@ -28,14 +29,14 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 echo "📦 Building Docker image..."
-                sh 'docker build -t $DOCKERHUB_USER/devops-resume:latest .'
+                sh 'docker build -t $DOCKER_USER/$DOCKERHUB_REPO:latest .'
             }
         }
 
         stage('Push to DockerHub') {
             steps {
                 echo "🚀 Pushing Docker image to Docker Hub..."
-                sh 'docker push $DOCKERHUB_USER/devops-resume:latest'
+                sh 'docker push $DOCKER_USER/$DOCKERHUB_REPO:latest'
             }
         }
 
@@ -45,7 +46,7 @@ pipeline {
                 sh '''
                     docker stop resume-app || true
                     docker rm resume-app || true
-                    docker run -d -p 8085:80 --name resume-app $DOCKERHUB_USER/devops-resume:latest
+                    docker run -d -p 8085:80 --name resume-app $DOCKER_USER/$DOCKERHUB_REPO:latest
                 '''
             }
         }
@@ -54,9 +55,11 @@ pipeline {
     post {
         success {
             echo "✅ Pipeline completed successfully!"
+            sh 'docker logout'
         }
         failure {
             echo "❌ Pipeline failed! Check logs for errors."
+            sh 'docker logout || true'
         }
     }
 }
