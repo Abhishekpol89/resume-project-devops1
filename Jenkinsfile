@@ -1,27 +1,18 @@
 pipeline {
     agent any
 
-    environment {
-        // This will be set from Jenkins credentials
-        DOCKER_USER = ''  // Will be populated via withCredentials
-        DOCKER_PASS = ''  // Will be populated via withCredentials
-    }
-
     stages {
-
         stage('Checkout Code') {
-            steps { 
-                echo "🔄 Checking out code from GitHub..."
+            steps {
+                echo "🔄 Checking out code..."
                 git branch: 'main', url: 'https://github.com/Abhishekpol89/resume-project-devops1.git'
             }
         }
 
         stage('Docker Login') {
             steps {
-                echo "🔑 Logging into Docker Hub..."
-                // Make sure 'dockerhub-credentials' has your Docker Hub username and PAT as password
-                withCredentials([usernamePassword(credentialsId: 'dockerhub-credentials', 
-                                                  usernameVariable: 'DOCKER_USER', 
+                withCredentials([usernamePassword(credentialsId: 'dockerhub-credentials',
+                                                  usernameVariable: 'DOCKER_USER',
                                                   passwordVariable: 'DOCKER_PASS')]) {
                     sh 'echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin'
                 }
@@ -30,9 +21,10 @@ pipeline {
 
         stage('Build & Push Docker Image') {
             steps {
-                echo "📦 Building and pushing Docker image..."
                 sh '''
+                    echo "📦 Building Docker image..."
                     docker build -t $DOCKER_USER/devops-resume:latest .
+                    echo "🚀 Pushing Docker image..."
                     docker push $DOCKER_USER/devops-resume:latest
                 '''
             }
@@ -40,8 +32,8 @@ pipeline {
 
         stage('Deploy Container') {
             steps {
-                echo "⚡ Deploying Docker container..."
                 sh '''
+                    echo "⚡ Deploying container..."
                     docker stop resume-app || true
                     docker rm resume-app || true
                     docker run -d -p 8085:80 --name resume-app $DOCKER_USER/devops-resume:latest
@@ -52,14 +44,13 @@ pipeline {
 
     post {
         always {
-            echo "🛑 Logging out from Docker Hub..."
             sh 'docker logout || true'
         }
         success {
-            echo '✅ Pipeline completed successfully!'
+            echo "✅ Pipeline finished successfully!"
         }
         failure {
-            echo '❌ Pipeline failed! Check logs for errors.'
+            echo "❌ Pipeline failed!"
         }
     }
 }
