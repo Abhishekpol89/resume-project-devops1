@@ -2,55 +2,52 @@ pipeline {
     agent any
 
     environment {
-        DOCKERHUB_USER = 'abhishekpol'
+        DOCKERHUB_USER = 'abhishekpol'                     // Your Docker Hub username
+        DOCKERHUB_PASS = credentials('dockerhub-credentials') // ID of secret in Jenkins
     }
 
     stages {
-        stage('Checkout') {
-            steps { 
-                // Explicitly checkout main branch
-                git branch: 'main', url: 'https://github.com/Abhishekpol89/resume-project-devops1.git'
+        stage('Checkout Code') {
+            steps {
+                git branch: 'main', url: 'https://github.com/Abhishekpol89/Resume-website-.git'
+            }
+        }
+
+        stage('Docker Login') {
+            steps {
+                sh 'echo $DOCKERHUB_PASS | docker login -u $DOCKERHUB_USER --password-stdin'
             }
         }
 
         stage('Build Docker Image') {
-            steps { 
-                sh 'docker build -t $DOCKERHUB_USER/devops-resume:latest .'
+            steps {
+                sh 'docker build -t abhishekpol/resume-app:latest .'
             }
         }
 
-        stage('Push to DockerHub') {
+        stage('Push to Docker Hub') {
             steps {
-                // Use withCredentials safely to pass secret
-                withCredentials([string(credentialsId: 'dockerhub-credentials', variable: 'DOCKERHUB_PASS')]) {
-                    sh 'echo $DOCKERHUB_PASS | docker login -u $DOCKERHUB_USER --password-stdin'
-                    sh 'docker push $DOCKERHUB_USER/devops-resume:latest'
-                }
+                sh 'docker push abhishekpol/resume-app:latest'
             }
         }
 
-        stage('Deploy') {
+        stage('Deploy Container') {
             steps {
-                // Stop and remove old container if exists, then run new one
                 sh '''
-                    docker stop resume-app || true
-                    docker rm resume-app || true
-                    docker run -d -p 8085:80 --name resume-app $DOCKERHUB_USER/devops-resume:latest
+                docker stop resume-app || true
+                docker rm resume-app || true
+                docker run -d -p 8085:80 --name resume-app abhishekpol/resume-app:latest
                 '''
             }
         }
     }
 
     post {
-        always {
-            // Optional: logout from DockerHub after push
-            sh 'docker logout'
-        }
         success {
-            echo 'Pipeline completed successfully!'
+            echo '✅ Pipeline completed successfully!'
         }
         failure {
-            echo 'Pipeline failed! Check logs for errors.'
+            echo '❌ Pipeline failed. Check logs for errors.'
         }
     }
 }
